@@ -1,0 +1,11 @@
+$services = Get-Service |Select Name, Status | Sort-Object Name
+#$hash |% {'<Objects>'} {$_.psobject.properties |% {'  <Object>'} {"    <$($_.name)>$($_.value)</$($_.name)>"} {'  </Object>'} } {'</Objects>'} | Out-File "C:\temp\export.xml"
+$services |% {'<Services>'} {$_.psobject.properties |% {'  <Service>'} {"    <$($_.name)>$($_.value)</$($_.name)>"} {'  </Service>'} } {'</Services>'} | Out-File "C:\temp\services.xml"
+
+$diskinfo = Get-WmiObject Win32_LogicalDisk  -ErrorAction STOP | 
+                Select-Object DeviceID,FileSystem,VolumeName,
+                @{Expression={$_.Size /1Gb -as [int]};Label="Total_Size_GB"},
+                @{Expression={$_.Freespace / 1Gb -as [int]};Label="Free_Space_GB"}
+$diskinfo |% {'<diskinfo>'} {$_.psobject.properties |% {'  <disk>'} {"    <$($_.name)>$($_.value)</$($_.name)>"} {'  </disk>'} } {'</diskinfo>'} | Out-File "C:\temp\diskinfo.xml"
+$software = Get-WmiObject Win32_Product -ErrorAction STOP | Select-Object Vendor,Name,Version | Sort-Object Vendor,Name
+$software |% {'<software>'} {$_.psobject.properties |% {'  <product>'} {"    <$($_.name)>$($_.value)</$($_.name)>"} {'  </product>'} } {'</software>'} | Out-File "C:\temp\software.xml"

@@ -1,0 +1,6 @@
+import-module ActiveDirectory
+Get-ADComputer -Filter {OperatingSystem -Like "Windows Server*"} | %{.\Collect-ServerInfo.ps1 $_.DNSHostName}
+
+
+
+or .\GetITCM.ps1
