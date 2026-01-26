@@ -73,6 +73,9 @@ Begin
 {
     #Initialize
     Write-Verbose "Initializing"
+    
+    # Constants
+    $MAX_DISABLED_FIREWALL_RULES = 100  # Limit for disabled firewall rules to prevent overwhelming output
 
     # Markdown helpers
     function Add-MDLine([string]$s, [System.Text.StringBuilder]$builder){ [void]$builder.AppendLine($s) }
@@ -86,7 +89,8 @@ Begin
         $cells = foreach($c in $Cols){
           $v = $row.$c
           if($v -is [DateTime]){ $v = $v.ToString('yyyy-MM-dd HH:mm') }
-          ($v -as [string]).Replace('|','`\|').Replace("`r`n",' ').Replace("`n",' ')
+          # Escape pipe characters and remove newlines for Markdown table cells
+          ($v -as [string]).Replace('|','&#124;').Replace("`r`n",' ').Replace("`n",' ')
         }
         Add-MDLine ('| ' + ($cells -join ' | ') + ' |') $builder
       }
@@ -643,7 +647,7 @@ Process
  
         Write-Verbose "Collecting Local Security Policy"
         
-        $tempInf = Join-Path $env:TEMP "$ComputerName-security-policy.inf"
+        $tempInf = Join-Path $env:TEMP "$ComputerName-security-policy-$([Guid]::NewGuid().ToString()).inf"
         $secEditSuccess = $false
         
         try { 
@@ -651,7 +655,9 @@ Process
             # NOTE: Remote execution via WMI requires appropriate credentials and permissions.
             # This is consistent with the WMI-based approach used throughout this script.
             if ($ComputerName -ne $env:COMPUTERNAME) {
-                $remoteInf = "C:\Windows\Temp\$ComputerName-security-policy.inf"
+                # Use GUID to prevent predictable file paths (security best practice)
+                $remoteGuid = [Guid]::NewGuid().ToString()
+                $remoteInf = "C:\Windows\Temp\security-policy-$remoteGuid.inf"
                 # Execute secedit remotely via WMI Win32_Process
                 $process = Invoke-WmiMethod -ComputerName $ComputerName -Class Win32_Process -Name Create -ArgumentList "secedit.exe /export /mergedpolicy /cfg `"$remoteInf`"" -ErrorAction Stop
                 Start-Sleep -Seconds 3
@@ -907,12 +913,12 @@ Process
                         }
                     }
                     
-                    if ($disabledRows.Count -gt 100) {
-                        $htmlbody += "<p>Too many disabled rules ($($disabledRows.Count)). Showing first 100.</p>"
-                        $htmlbody += ($disabledRows | Select-Object -First 100) | ConvertTo-Html -Fragment
+                    if ($disabledRows.Count -gt $MAX_DISABLED_FIREWALL_RULES) {
+                        $htmlbody += "<p>Too many disabled rules ($($disabledRows.Count)). Showing first $MAX_DISABLED_FIREWALL_RULES.</p>"
+                        $htmlbody += ($disabledRows | Select-Object -First $MAX_DISABLED_FIREWALL_RULES) | ConvertTo-Html -Fragment
                         $htmlbody += $spacer
-                        Add-MDLine "> _Too many disabled rules ($($disabledRows.Count)). Showing first 100._" $mdBuilder
-                        Emit-MDTable ($disabledRows | Select-Object -First 100) @('Display','Direction','Action','Profile','Protocol','LocalPort','RemotePort') $mdBuilder
+                        Add-MDLine "> _Too many disabled rules ($($disabledRows.Count)). Showing first $MAX_DISABLED_FIREWALL_RULES._" $mdBuilder
+                        Emit-MDTable ($disabledRows | Select-Object -First $MAX_DISABLED_FIREWALL_RULES) @('Display','Direction','Action','Profile','Protocol','LocalPort','RemotePort') $mdBuilder
                     } elseif ($disabledRows.Count -gt 0) {
                         $htmlbody += $disabledRows | ConvertTo-Html -Fragment
                         $htmlbody += $spacer
