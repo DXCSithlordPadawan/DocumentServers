@@ -677,7 +677,7 @@ blockquote { border-left: 4px solid #0066cc; padding-left: 15px; margin-left: 0;
         
         # Tables
         if ($line -match '^\|(.+)\|$') {
-            # Check for separator row FIRST before extracting cells
+            # Check for separator row first before extracting cells
             if ($line -match '^[\|\s\-]+$') {
                 # Table separator - start table body
                 [void]$html.AppendLine('<tbody>')
@@ -724,7 +724,8 @@ blockquote { border-left: 4px solid #0066cc; padding-left: 15px; margin-left: 0;
             [void]$html.AppendLine("<li>$escapedListItem</li>")
             continue
         } else {
-            if ($inList) {
+            # Close list when we encounter non-empty, non-list content
+            if ($inList -and $line.Trim() -ne '') {
                 [void]$html.AppendLine('</ul>')
                 $inList = $false
             }
