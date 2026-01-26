@@ -810,7 +810,7 @@ Process
                     $profText = & netsh advfirewall show allprofiles 2>$null
                     $htmlbody += "<pre>$profText</pre>"
                     $htmlbody += $spacer
-                    Add-MDLine "````text`n$profText`n````" $mdBuilder
+                    Add-MDLine "``````text`n$profText`n``````" $mdBuilder
                     Add-MDLine "" $mdBuilder
                 }
             } else {
@@ -863,7 +863,7 @@ Process
                     $txt = & netsh advfirewall firewall show rule name=all 2>$null
                     $htmlbody += "<pre>$txt</pre>"
                     $htmlbody += $spacer
-                    Add-MDLine "````text`n$txt`n````" $mdBuilder
+                    Add-MDLine "``````text`n$txt`n``````" $mdBuilder
                     Add-MDLine "" $mdBuilder
                 }
             } else {
