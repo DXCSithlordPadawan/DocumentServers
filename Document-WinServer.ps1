@@ -629,7 +629,7 @@ blockquote { border-left: 4px solid #0066cc; padding-left: 15px; margin-left: 0;
         }
         
         if ($inCodeBlock) {
-            $escaped = [System.Web.HttpUtility]::HtmlEncode($line)
+            $escaped = [System.Net.WebUtility]::HtmlEncode($line)
             [void]$html.AppendLine($escaped)
             continue
         }
@@ -694,7 +694,7 @@ blockquote { border-left: 4px solid #0066cc; padding-left: 15px; margin-left: 0;
                 # Table row
                 [void]$html.AppendLine('<tr>')
                 foreach($cell in $cells){
-                    $escaped = [System.Web.HttpUtility]::HtmlEncode($cell)
+                    $escaped = [System.Net.WebUtility]::HtmlEncode($cell)
                     [void]$html.AppendLine("<td>$escaped</td>")
                 }
                 [void]$html.AppendLine('</tr>')
