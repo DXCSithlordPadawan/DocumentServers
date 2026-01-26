@@ -611,6 +611,7 @@ blockquote { border-left: 4px solid #0066cc; padding-left: 15px; margin-left: 0;
     $lines = $MarkdownText -split "`n"
     $inTable = $false
     $inCodeBlock = $false
+    $inList = $false
     $tableHeaders = @()
     
     foreach($line in $lines){
@@ -636,23 +637,26 @@ blockquote { border-left: 4px solid #0066cc; padding-left: 15px; margin-left: 0;
         
         # Headers
         if ($line -match '^# (.+)') {
+            $escapedH1 = [System.Net.WebUtility]::HtmlEncode($matches[1])
             if ($matches[1] -match '—') {
                 [void]$html.AppendLine('<div class="header">')
-                [void]$html.AppendLine("<h1>$($matches[1])</h1>")
+                [void]$html.AppendLine("<h1>$escapedH1</h1>")
                 [void]$html.AppendLine('</div>')
             } else {
-                [void]$html.AppendLine("<h1>$($matches[1])</h1>")
+                [void]$html.AppendLine("<h1>$escapedH1</h1>")
             }
             continue
         }
         if ($line -match '^## (.+)') {
             if ($inTable) { [void]$html.AppendLine('</table>'); $inTable = $false }
-            [void]$html.AppendLine("<h2>$($matches[1])</h2>")
+            $escapedH2 = [System.Net.WebUtility]::HtmlEncode($matches[1])
+            [void]$html.AppendLine("<h2>$escapedH2</h2>")
             continue
         }
         if ($line -match '^### (.+)') {
             if ($inTable) { [void]$html.AppendLine('</table>'); $inTable = $false }
-            [void]$html.AppendLine("<h3>$($matches[1])</h3>")
+            $escapedH3 = [System.Net.WebUtility]::HtmlEncode($matches[1])
+            [void]$html.AppendLine("<h3>$escapedH3</h3>")
             continue
         }
         
@@ -660,25 +664,27 @@ blockquote { border-left: 4px solid #0066cc; padding-left: 15px; margin-left: 0;
         if ($line -match '^> (.+)') {
             if ($inTable) { [void]$html.AppendLine('</table>'); $inTable = $false }
             $content = $matches[1]
+            $escapedContent = [System.Net.WebUtility]::HtmlEncode($content)
             if ($content -match 'Generated:|Elevated:') {
                 [void]$html.AppendLine('<div class="metadata">')
-                [void]$html.AppendLine("<p>$content</p>")
+                [void]$html.AppendLine("<p>$escapedContent</p>")
                 [void]$html.AppendLine('</div>')
             } else {
-                [void]$html.AppendLine("<blockquote>$content</blockquote>")
+                [void]$html.AppendLine("<blockquote>$escapedContent</blockquote>")
             }
             continue
         }
         
         # Tables
         if ($line -match '^\|(.+)\|$') {
-            $cells = ($line -split '\|' | Where-Object { $_ }) | ForEach-Object { $_.Trim() }
-            
+            # Check for separator row FIRST before extracting cells
             if ($line -match '^[\|\s\-]+$') {
                 # Table separator - start table body
                 [void]$html.AppendLine('<tbody>')
                 continue
             }
+            
+            $cells = ($line -split '\|' | Where-Object { $_ }) | ForEach-Object { $_.Trim() }
             
             if (-not $inTable) {
                 # Table header
@@ -686,7 +692,8 @@ blockquote { border-left: 4px solid #0066cc; padding-left: 15px; margin-left: 0;
                 [void]$html.AppendLine('<thead><tr>')
                 $tableHeaders = $cells
                 foreach($cell in $cells){
-                    [void]$html.AppendLine("<th>$cell</th>")
+                    $escapedHeader = [System.Net.WebUtility]::HtmlEncode($cell)
+                    [void]$html.AppendLine("<th>$escapedHeader</th>")
                 }
                 [void]$html.AppendLine('</tr></thead>')
                 $inTable = $true
@@ -709,8 +716,18 @@ blockquote { border-left: 4px solid #0066cc; padding-left: 15px; margin-left: 0;
         
         # Lists
         if ($line -match '^[\s]*- (.+)') {
-            [void]$html.AppendLine("<li>$($matches[1])</li>")
+            if (-not $inList) {
+                [void]$html.AppendLine('<ul>')
+                $inList = $true
+            }
+            $escapedListItem = [System.Net.WebUtility]::HtmlEncode($matches[1])
+            [void]$html.AppendLine("<li>$escapedListItem</li>")
             continue
+        } else {
+            if ($inList) {
+                [void]$html.AppendLine('</ul>')
+                $inList = $false
+            }
         }
         
         # Horizontal rules
@@ -724,12 +741,14 @@ blockquote { border-left: 4px solid #0066cc; padding-left: 15px; margin-left: 0;
         
         # Regular paragraphs
         if ($line.Trim() -ne '') {
-            [void]$html.AppendLine("<p>$line</p>")
+            $escapedLine = [System.Net.WebUtility]::HtmlEncode($line)
+            [void]$html.AppendLine("<p>$escapedLine</p>")
         }
     }
     
     if ($inTable) { [void]$html.AppendLine('</tbody></table>') }
     if ($inCodeBlock) { [void]$html.AppendLine('</code></pre>') }
+    if ($inList) { [void]$html.AppendLine('</ul>') }
     
     [void]$html.AppendLine('</div>')
     [void]$html.AppendLine('</body>')
