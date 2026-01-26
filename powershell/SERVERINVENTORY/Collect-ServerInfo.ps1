@@ -648,19 +648,26 @@ Process
         
         try { 
             # For remote computers, use WMI to execute secedit
+            # NOTE: Remote execution via WMI requires appropriate credentials and permissions.
+            # This is consistent with the WMI-based approach used throughout this script.
             if ($ComputerName -ne $env:COMPUTERNAME) {
                 $remoteInf = "C:\Windows\Temp\$ComputerName-security-policy.inf"
+                # Execute secedit remotely via WMI Win32_Process
                 $process = Invoke-WmiMethod -ComputerName $ComputerName -Class Win32_Process -Name Create -ArgumentList "secedit.exe /export /mergedpolicy /cfg `"$remoteInf`"" -ErrorAction Stop
                 Start-Sleep -Seconds 3
                 
-                # Try to copy file back (may not work without admin shares)
+                # Try to copy file back using administrative share
+                # NOTE: Requires administrative share access (C$) and proper authentication.
+                # If this fails, the section will be skipped gracefully.
                 try {
                     $remotePath = "\\$ComputerName\C$\Windows\Temp\$ComputerName-security-policy.inf"
                     if (Test-Path $remotePath) {
                         Copy-Item $remotePath $tempInf -ErrorAction Stop
                         $secEditSuccess = $true
                     }
-                } catch {}
+                } catch {
+                    Write-Verbose "Unable to retrieve security policy file from remote computer: $($_.Exception.Message)"
+                }
             } else {
                 # Local execution
                 & secedit.exe /export /mergedpolicy /cfg "$tempInf" | Out-Null
@@ -803,7 +810,7 @@ Process
                     $profText = & netsh advfirewall show allprofiles 2>$null
                     $htmlbody += "<pre>$profText</pre>"
                     $htmlbody += $spacer
-                    Add-MDLine "``````text`n$profText`n``````" $mdBuilder
+                    Add-MDLine "````text`n$profText`n````" $mdBuilder
                     Add-MDLine "" $mdBuilder
                 }
             } else {
@@ -856,7 +863,7 @@ Process
                     $txt = & netsh advfirewall firewall show rule name=all 2>$null
                     $htmlbody += "<pre>$txt</pre>"
                     $htmlbody += $spacer
-                    Add-MDLine "``````text`n$txt`n``````" $mdBuilder
+                    Add-MDLine "````text`n$txt`n````" $mdBuilder
                     Add-MDLine "" $mdBuilder
                 }
             } else {
