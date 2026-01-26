@@ -192,8 +192,8 @@ function Get-InstalledSoftware {
     'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*',
     'HKCU:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*'
   )
-  foreach($p in $paths){
-    Get-ItemProperty -Path $p -ErrorAction SilentlyContinue
+  $paths | ForEach-Object {
+    Get-ItemProperty -Path $_ -ErrorAction SilentlyContinue
   } | Where-Object {
     $_.DisplayName -and $_.SystemComponent -ne 1 -and -not $_.ReleaseType -and -not $_.ParentKeyName
   } | Select-Object @{n='Name';e={$_.DisplayName}},
